@@ -1,0 +1,168 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 220 20% 10%;
+    --foreground: 210 40% 98%;
+
+    --card: 220 18% 14%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 220 18% 14%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 142 70% 45%;
+    --primary-foreground: 220 20% 10%;
+
+    --secondary: 220 15% 20%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 215 20% 55%;
+
+    --accent: 38 92% 50%;
+    --accent-foreground: 220 20% 10%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 15% 22%;
+    --input: 220 15% 22%;
+    --ring: 142 70% 45%;
+
+    --radius: 0.5rem;
+
+    /* Game-specific colors */
+    --cell-hidden: 220 15% 22%;
+    --cell-revealed: 220 18% 12%;
+    --cell-hover: 220 15% 28%;
+    --mine: 0 72% 51%;
+    --flag: 38 92% 50%;
+    
+    /* Number colors */
+    --num-1: 210 100% 60%;
+    --num-2: 142 70% 50%;
+    --num-3: 0 72% 55%;
+    --num-4: 260 70% 60%;
+    --num-5: 25 90% 50%;
+    --num-6: 180 70% 45%;
+    --num-7: 0 0% 70%;
+    --num-8: 0 0% 50%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 20% 10%;
+    --foreground: 210 40% 98%;
+
+    --card: 220 18% 14%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 220 18% 14%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 142 70% 45%;
+    --primary-foreground: 220 20% 10%;
+
+    --secondary: 220 15% 20%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 215 20% 55%;
+
+    --accent: 38 92% 50%;
+    --accent-foreground: 220 20% 10%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 15% 22%;
+    --input: 220 15% 22%;
+    --ring: 142 70% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  .font-retro {
+    font-family: 'VT323', monospace;
+  }
+  
+  .cell-hidden {
+    background: hsl(var(--cell-hidden));
+    box-shadow: 
+      inset -2px -2px 0 hsl(220 15% 15%),
+      inset 2px 2px 0 hsl(220 15% 28%);
+  }
+  
+  .cell-revealed {
+    background: hsl(var(--cell-revealed));
+    box-shadow: inset 0 0 0 1px hsl(220 15% 18%);
+  }
+  
+  .cell-mine {
+    background: hsl(var(--mine) / 0.3);
+  }
+  
+  .cell-exploded {
+    background: hsl(var(--mine));
+  }
+
+  .num-1 { color: hsl(var(--num-1)); }
+  .num-2 { color: hsl(var(--num-2)); }
+  .num-3 { color: hsl(var(--num-3)); }
+  .num-4 { color: hsl(var(--num-4)); }
+  .num-5 { color: hsl(var(--num-5)); }
+  .num-6 { color: hsl(var(--num-6)); }
+  .num-7 { color: hsl(var(--num-7)); }
+  .num-8 { color: hsl(var(--num-8)); }
+}
+
+@layer utilities {
+  .animate-reveal {
+    animation: reveal 0.15s ease-out;
+  }
+  
+  @keyframes reveal {
+    from {
+      transform: scale(0.9);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  
+  .animate-shake {
+    animation: shake 0.5s ease-in-out;
+  }
+  
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+}
