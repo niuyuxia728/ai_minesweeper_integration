@@ -1,0 +1,265 @@
+openapi: "3.0.3"
+info:
+  title: Minesweeper API
+  version: "1.0.0"
+  description: >-
+    Backend contract derived from the frontend mock API (auth, leaderboard,
+    spectator). Use this specification to implement the backend required by the
+    frontend.
+servers:
+  - url: https://api.example.com
+  - url: http://localhost:4000
+paths:
+  /auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginCredentials'
+      responses:
+        '200':
+          description: Auth response with user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /auth/signup:
+    post:
+      summary: Signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupCredentials'
+      responses:
+        '200':
+          description: Auth response with created user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /auth/logout:
+    post:
+      summary: Logout (invalidate session/token)
+      responses:
+        '204':
+          description: Logged out
+  /auth/me:
+    get:
+      summary: Get current authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Not authenticated
+  /leaderboard:
+    get:
+      summary: Get leaderboard (sorted by best time)
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaderboardEntry'
+    post:
+      summary: Submit a score
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitScoreRequest'
+      responses:
+        '201':
+          description: Created leaderboard entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardEntry'
+  /spectator/active:
+    get:
+      summary: Get active players (current games)
+      responses:
+        '200':
+          description: Active players list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ActivePlayer'
+  /spectator/{playerId}:
+    get:
+      summary: Get a single player's live state (snapshot)
+      parameters:
+        - name: playerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Player snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivePlayer'
+        '404':
+          description: Player not found
+  /spectator/stream:
+    get:
+      summary: Real-time active players stream (SSE)
+      description: |
+        Server-Sent Events endpoint that emits updated ActivePlayer[] payload
+        periodically. Alternatively implement the same semantics over WebSocket.
+      responses:
+        '200':
+          description: SSE stream (text/event-stream)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - username
+        - email
+        - createdAt
+    LoginCredentials:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+    SignupCredentials:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - username
+        - email
+        - password
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        user:
+          $ref: '#/components/schemas/User'
+        error:
+          type: string
+    LeaderboardEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        time:
+          type: integer
+          description: seconds
+        date:
+          type: string
+          format: date-time
+        difficulty:
+          type: string
+          enum: ['easy','medium','hard']
+      required: [id, username, time, date, difficulty]
+    SubmitScoreRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        time:
+          type: integer
+        difficulty:
+          type: string
+          enum: ['easy','medium','hard']
+      required: [username, time, difficulty]
+    Cell:
+      type: object
+      properties:
+        isMine:
+          type: boolean
+        isRevealed:
+          type: boolean
+        isFlagged:
+          type: boolean
+        neighborMines:
+          type: integer
+      required: [isMine, isRevealed, isFlagged, neighborMines]
+    ActivePlayer:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        board:
+          type: array
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Cell'
+        status:
+          type: string
+          enum: ['playing','won','lost']
+        timer:
+          type: integer
+          description: seconds
+        flagsCount:
+          type: integer
+        minesCount:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+      required: [id, username, board, status, timer, flagsCount, minesCount, startedAt]
