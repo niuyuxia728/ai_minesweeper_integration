@@ -3,39 +3,13 @@ import random
 import uuid
 from datetime import datetime, timedelta
 from typing import Dict, List
+from sqlalchemy.orm import Session
+from .database import SessionLocal, User as DBUser, LeaderboardEntry as DBEntry
 from .schemas import LeaderboardEntry, ActivePlayer, Cell
 
-# In-memory mock storage
-_users: Dict[str, Dict] = {
-    # predefined users for manual testing
-    '11111111-1111-1111-1111-111111111111': {
-        'id': '11111111-1111-1111-1111-111111111111',
-        'username': 'alice',
-        'email': 'alice@example.com',
-        'password': 'pass',
-        'createdAt': datetime.utcnow(),
-    },
-    '22222222-2222-2222-2222-222222222222': {
-        'id': '22222222-2222-2222-2222-222222222222',
-        'username': 'bob',
-        'email': 'bob@example.com',
-        'password': 'pass',
-        'createdAt': datetime.utcnow(),
-    },
-}
-_leaderboard: List[LeaderboardEntry] = [
-    LeaderboardEntry(id='1', username='SpeedRunner', time=42, date=datetime(2024,1,15), difficulty='easy'),
-    LeaderboardEntry(id='2', username='MineExpert', time=56, date=datetime(2024,1,14), difficulty='easy'),
-    LeaderboardEntry(id='3', username='BombDefuser', time=63, date=datetime(2024,1,13), difficulty='easy'),
-    LeaderboardEntry(id='4', username='QuickClick', time=71, date=datetime(2024,1,12), difficulty='easy'),
-    LeaderboardEntry(id='5', username='SafePlayer', time=89, date=datetime(2024,1,11), difficulty='easy'),
-    LeaderboardEntry(id='6', username='FlagMaster', time=94, date=datetime(2024,1,10), difficulty='easy'),
-    LeaderboardEntry(id='7', username='CoolGamer', time=105, date=datetime(2024,1,9), difficulty='easy'),
-    LeaderboardEntry(id='8', username='ProSweeper', time=112, date=datetime(2024,1,8), difficulty='easy'),
-]
+# In-memory for active players (simulation)
 _active_players: List[ActivePlayer] = []
 _sim_task = None
-
 
 def create_mock_board(rows=9, cols=9):
     board = []
@@ -48,7 +22,6 @@ def create_mock_board(rows=9, cols=9):
             row.append(cell)
         board.append(row)
     return board
-
 
 def init_active_players():
     global _active_players
@@ -67,7 +40,6 @@ def init_active_players():
         )
         _active_players.append(player)
 
-
 async def _simulate():
     while True:
         await asyncio.sleep(1.5)
@@ -81,16 +53,13 @@ async def _simulate():
                     p.flagsCount = 0
                     p.startedAt = datetime.utcnow()
             else:
-                # simulate a simple timer increment and occasional flag/reveal
                 p.timer += 1
                 if random.random() > 0.98:
                     p.status = 'lost'
                 elif random.random() > 0.995:
                     p.status = 'won'
             new_players.append(p)
-        # mutate in place
         _active_players[:] = new_players
-
 
 def start_simulation(loop=None):
     global _sim_task
@@ -99,61 +68,96 @@ def start_simulation(loop=None):
             loop = asyncio.get_event_loop()
         _sim_task = loop.create_task(_simulate())
 
-
 def stop_simulation():
     global _sim_task
     if _sim_task:
         _sim_task.cancel()
         _sim_task = None
 
-# Auth helpers
-
+# Auth helpers - now using DB
 def signup(username: str, email: str, password: str):
-    # check exists
-    if any(u['email'] == email for u in _users.values()):
-        return None, 'Email already registered'
-    if any(u['username'] == username for u in _users.values()):
-        return None, 'Username already taken'
-    uid = str(uuid.uuid4())
-    user = {
-        'id': uid,
-        'username': username,
-        'email': email,
-        'password': password,
-        'createdAt': datetime.utcnow()
-    }
-    _users[uid] = user
-    return user, None
-
+    db: Session = SessionLocal()
+    try:
+        # Check if exists
+        if db.query(DBUser).filter(DBUser.email == email).first():
+            return None, 'Email already registered'
+        if db.query(DBUser).filter(DBUser.username == username).first():
+            return None, 'Username already taken'
+        uid = str(uuid.uuid4())
+        user = DBUser(id=uid, username=username, email=email, password=password)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'createdAt': user.created_at
+        }, None
+    except Exception as e:
+        db.rollback()
+        return None, str(e)
+    finally:
+        db.close()
 
 def login(email: str, password: str):
-    user = next((u for u in _users.values() if u['email'] == email), None)
-    if not user:
-        return None, 'User not found'
-    if user['password'] != password:
-        return None, 'Invalid password'
-    return user, None
+    db: Session = SessionLocal()
+    try:
+        user = db.query(DBUser).filter(DBUser.email == email).first()
+        if not user:
+            return None, 'User not found'
+        if user.password != password:
+            return None, 'Invalid password'
+        return {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'createdAt': user.created_at
+        }, None
+    finally:
+        db.close()
 
-# Leaderboard
-
+# Leaderboard - using DB
 def get_leaderboard(limit: int = 10):
-    sorted_lb = sorted(_leaderboard, key=lambda e: e.time)
-    return sorted_lb[:limit]
-
+    db: Session = SessionLocal()
+    try:
+        entries = db.query(DBEntry).order_by(DBEntry.time).limit(limit).all()
+        return [LeaderboardEntry(
+            id=e.id,
+            username=e.username,
+            time=e.time,
+            date=e.date,
+            difficulty=e.difficulty
+        ) for e in entries]
+    finally:
+        db.close()
 
 def submit_score(username: str, time: int, difficulty: str):
-    entry = LeaderboardEntry(id=str(uuid.uuid4()), username=username, time=time, date=datetime.utcnow(), difficulty=difficulty)
-    _leaderboard.append(entry)
-    return entry
+    db: Session = SessionLocal()
+    try:
+        entry = DBEntry(id=str(uuid.uuid4()), username=username, time=time, difficulty=difficulty)
+        db.add(entry)
+        db.commit()
+        db.refresh(entry)
+        return LeaderboardEntry(
+            id=entry.id,
+            username=entry.username,
+            time=entry.time,
+            date=entry.date,
+            difficulty=entry.difficulty
+        )
+    except Exception as e:
+        db.rollback()
+        raise e
+    finally:
+        db.close()
 
-# Spectator
-
+# Spectator - still in memory
 def get_active_players():
     return list(_active_players)
-
 
 def find_player(player_id: str):
     return next((p for p in _active_players if p.id == player_id), None)
 
-# initialize
+# Initialize
 init_active_players()

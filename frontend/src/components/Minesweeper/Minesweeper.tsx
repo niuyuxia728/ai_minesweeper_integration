@@ -1,9 +1,23 @@
 import { GameBoard } from './GameBoard';
 import { GameHeader } from './GameHeader';
 import { useGameLogic } from './useGameLogic';
+import { leaderboardApi, authApi } from '@/services/mockApi';
+import { useCallback } from 'react';
 
 export const Minesweeper = () => {
-  const { gameState, handleCellClick, handleCellRightClick, resetGame } = useGameLogic();
+  const handleWin = useCallback(async (time: number) => {
+    const user = await authApi.getCurrentUser();
+    if (user) {
+      try {
+        await leaderboardApi.submitScore(user.username, time, 'easy');
+        console.log('Score submitted:', user.username, time);
+      } catch (error) {
+        console.error('Failed to submit score:', error);
+      }
+    }
+  }, []);
+
+  const { gameState, handleCellClick, handleCellRightClick, resetGame } = useGameLogic(handleWin);
 
   const isGameOver = gameState.status === 'won' || gameState.status === 'lost';
 

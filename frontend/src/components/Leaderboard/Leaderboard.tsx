@@ -1,26 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { leaderboardApi, LeaderboardEntry } from '@/services/mockApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, Clock, Medal } from 'lucide-react';
+import { Trophy, Clock, Medal, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export const Leaderboard = () => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const data = await leaderboardApi.getLeaderboard(10);
-        setEntries(data);
-      } catch (error) {
-        console.error('Failed to fetch leaderboard:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchLeaderboard();
+  const fetchLeaderboard = useCallback(async () => {
+    try {
+      const data = await leaderboardApi.getLeaderboard(10);
+      setEntries(data);
+    } catch (error) {
+      console.error('Failed to fetch leaderboard:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, [fetchLeaderboard]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -64,10 +65,15 @@ export const Leaderboard = () => {
   return (
     <Card className="bg-card border-border">
       <CardHeader>
-        <CardTitle className="font-retro text-xl flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-accent" />
-          Leaderboard
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="font-retro text-xl flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-accent" />
+            Leaderboard
+          </CardTitle>
+          <Button variant="outline" size="sm" onClick={fetchLeaderboard}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-1">

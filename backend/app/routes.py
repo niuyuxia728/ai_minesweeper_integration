@@ -30,14 +30,43 @@ async def logout():
 
 @router.get('/auth/me', response_model=User)
 async def me(request: Request):
-    # For mock, read header X-User-Id
+    # Read header X-User-Id
     uid = request.headers.get('x-user-id')
     if not uid:
         raise HTTPException(status_code=401, detail='Not authenticated')
-    user = mock_db._users.get(uid)
-    if not user:
-        raise HTTPException(status_code=401, detail='Not authenticated')
-    return User(id=user['id'], username=user['username'], email=user['email'], createdAt=user['createdAt'])
+    
+    # Query database for user
+    from .database import SessionLocal, User as DBUser
+    db = SessionLocal()
+    try:
+        db_user = db.query(DBUser).filter(DBUser.id == uid).first()
+        if not db_user:
+            raise HTTPException(status_code=401, detail='Not authenticated')
+        return User(id=db_user.id, username=db_user.username, email=db_user.email, createdAt=db_user.created_at)
+    finally:
+        db.close()
+
+@router.get('/users', response_model=List[User])
+async def get_users(request: Request):
+    """Get all registered users (requires authentication)"""
+    # For now, require authentication (could be admin-only in production)
+    uid = request.headers.get('x-user-id')
+    if not uid:
+        raise HTTPException(status_code=401, detail='Not authenticated - provide X-User-Id header')
+    
+    # Verify the requesting user exists
+    from .database import SessionLocal, User as DBUser
+    db = SessionLocal()
+    try:
+        db_user = db.query(DBUser).filter(DBUser.id == uid).first()
+        if not db_user:
+            raise HTTPException(status_code=401, detail='Not authenticated')
+        
+        # Get all users
+        all_users = db.query(DBUser).order_by(DBUser.created_at.desc()).all()
+        return [User(id=u.id, username=u.username, email=u.email, createdAt=u.created_at) for u in all_users]
+    finally:
+        db.close()
 
 @router.get('/leaderboard', response_model=List[LeaderboardEntry])
 async def get_leaderboard(limit: int = 10):

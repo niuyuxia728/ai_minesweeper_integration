@@ -99,7 +99,7 @@ const revealAllMines = (board: Cell[][]): Cell[][] => {
   );
 };
 
-export const useGameLogic = () => {
+export const useGameLogic = (onWin?: (time: number) => void) => {
   const [gameState, setGameState] = useState<GameState>({
     board: createEmptyBoard(),
     status: 'playing',
@@ -142,6 +142,10 @@ export const useGameLogic = () => {
       newBoard = revealCell(newBoard, row, col);
       const won = checkWin(newBoard);
 
+      if (won && onWin) {
+        onWin(prev.timer + 1); // timer hasn't incremented yet, so add 1
+      }
+
       return {
         ...prev,
         board: newBoard,
@@ -149,7 +153,7 @@ export const useGameLogic = () => {
         isFirstClick: false,
       };
     });
-  }, []);
+  }, [onWin]);
 
   const handleCellRightClick = useCallback((row: number, col: number) => {
     setGameState(prev => {

@@ -32,3 +32,24 @@ Notes
 - If you use `uv`, running `uv sync` will install dependencies and `uv run` runs commands inside uv's environment.
 - Tests in `backend/tests` use AsyncClient(app=app) and do not require the server to be running.
 - To view the OpenAPI UI after starting the server, open http://127.0.0.1:4000/docs
+
+## API Endpoints
+
+### Authentication
+- `POST /auth/signup` - Register a new user
+- `POST /auth/login` - Login user
+- `GET /auth/me` - Get current user profile (requires X-User-Id header)
+- `GET /users` - Get all registered users (requires authentication)
+
+### Leaderboard
+- `GET /leaderboard` - Get leaderboard (top scores)
+- `POST /leaderboard` - Submit a game score
+
+### Spectator Mode
+- `GET /spectator/active` - Get list of active players
+- `GET /spectator/{player_id}` - Get specific player details
+- `GET /spectator/stream` - Server-sent events stream of active players
+
+## Database
+
+Uses SQLite by default (`minesweeper.db`). Can be configured with `DATABASE_URL` environment variable for PostgreSQL or other databases.
