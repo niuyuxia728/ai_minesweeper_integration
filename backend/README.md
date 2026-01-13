@@ -53,3 +53,16 @@ Notes
 ## Database
 
 Uses SQLite by default (`minesweeper.db`). Can be configured with `DATABASE_URL` environment variable for PostgreSQL or other databases.
+Examples
+
+For SQLite (default):
+
+	DATABASE_URL=sqlite:///./minesweeper.db
+
+For PostgreSQL (example):
+
+	DATABASE_URL=postgresql://<DB_USER>:<DB_PASSWORD>@<DB_HOST>:<DB_PORT>/<DB_NAME>
+
+Set `DATABASE_URL` in your environment or use a `.env` loader. When using `uv`, you can run the app with `uv run python -m uvicorn backend.app.main:app --reload --port 4000` and `Base.metadata.create_all` will create tables automatically on startup.
+
+If you plan to use migrations, `alembic` is included in the project dependencies.

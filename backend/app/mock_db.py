@@ -75,8 +75,11 @@ def stop_simulation():
         _sim_task = None
 
 # Auth helpers - now using DB
-def signup(username: str, email: str, password: str):
-    db: Session = SessionLocal()
+def signup(username: str, email: str, password: str, db: Session | None = None):
+    created_local = False
+    if db is None:
+        db = SessionLocal()
+        created_local = True
     try:
         # Check if exists
         if db.query(DBUser).filter(DBUser.email == email).first():
@@ -98,10 +101,14 @@ def signup(username: str, email: str, password: str):
         db.rollback()
         return None, str(e)
     finally:
-        db.close()
+        if created_local:
+            db.close()
 
-def login(email: str, password: str):
-    db: Session = SessionLocal()
+def login(email: str, password: str, db: Session | None = None):
+    created_local = False
+    if db is None:
+        db = SessionLocal()
+        created_local = True
     try:
         user = db.query(DBUser).filter(DBUser.email == email).first()
         if not user:
@@ -115,11 +122,15 @@ def login(email: str, password: str):
             'createdAt': user.created_at
         }, None
     finally:
-        db.close()
+        if created_local:
+            db.close()
 
 # Leaderboard - using DB
-def get_leaderboard(limit: int = 10):
-    db: Session = SessionLocal()
+def get_leaderboard(limit: int = 10, db: Session | None = None):
+    created_local = False
+    if db is None:
+        db = SessionLocal()
+        created_local = True
     try:
         entries = db.query(DBEntry).order_by(DBEntry.time).limit(limit).all()
         return [LeaderboardEntry(
@@ -130,10 +141,14 @@ def get_leaderboard(limit: int = 10):
             difficulty=e.difficulty
         ) for e in entries]
     finally:
-        db.close()
+        if created_local:
+            db.close()
 
-def submit_score(username: str, time: int, difficulty: str):
-    db: Session = SessionLocal()
+def submit_score(username: str, time: int, difficulty: str, db: Session | None = None):
+    created_local = False
+    if db is None:
+        db = SessionLocal()
+        created_local = True
     try:
         entry = DBEntry(id=str(uuid.uuid4()), username=username, time=time, difficulty=difficulty)
         db.add(entry)
@@ -150,7 +165,8 @@ def submit_score(username: str, time: int, difficulty: str):
         db.rollback()
         raise e
     finally:
-        db.close()
+        if created_local:
+            db.close()
 
 # Spectator - still in memory
 def get_active_players():

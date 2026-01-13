@@ -3,22 +3,24 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from typing import List
 from . import mock_db
 from .schemas import LoginCredentials, SignupCredentials, AuthResponse, User, LeaderboardEntry, SubmitScoreRequest, ActivePlayer
+from .database import get_db
+from sqlalchemy.orm import Session
 import json
 import asyncio
 
 router = APIRouter()
 
 @router.post('/auth/login', response_model=AuthResponse)
-async def login(creds: LoginCredentials):
-    user, err = mock_db.login(creds.email, creds.password)
+async def login(creds: LoginCredentials, db: Session = Depends(get_db)):
+    user, err = mock_db.login(creds.email, creds.password, db)
     if err:
         return AuthResponse(success=False, error=err)
     user_obj = User(id=user['id'], username=user['username'], email=user['email'], createdAt=user['createdAt'])
     return AuthResponse(success=True, user=user_obj)
 
 @router.post('/auth/signup', response_model=AuthResponse)
-async def signup(creds: SignupCredentials):
-    user, err = mock_db.signup(creds.username, creds.email, creds.password)
+async def signup(creds: SignupCredentials, db: Session = Depends(get_db)):
+    user, err = mock_db.signup(creds.username, creds.email, creds.password, db)
     if err:
         return AuthResponse(success=False, error=err)
     user_obj = User(id=user['id'], username=user['username'], email=user['email'], createdAt=user['createdAt'])
@@ -69,12 +71,12 @@ async def get_users(request: Request):
         db.close()
 
 @router.get('/leaderboard', response_model=List[LeaderboardEntry])
-async def get_leaderboard(limit: int = 10):
-    return mock_db.get_leaderboard(limit)
+async def get_leaderboard(limit: int = 10, db: Session = Depends(get_db)):
+    return mock_db.get_leaderboard(limit, db)
 
 @router.post('/leaderboard', response_model=LeaderboardEntry, status_code=201)
-async def post_score(req: SubmitScoreRequest):
-    return mock_db.submit_score(req.username, req.time, req.difficulty)
+async def post_score(req: SubmitScoreRequest, db: Session = Depends(get_db)):
+    return mock_db.submit_score(req.username, req.time, req.difficulty, db)
 
 @router.get('/spectator/active', response_model=List[ActivePlayer])
 async def get_active():

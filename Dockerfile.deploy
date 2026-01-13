@@ -1,0 +1,40 @@
+### Multi-stage Dockerfile to build frontend and backend into one deployable image
+
+### Frontend build stage
+FROM node:18 AS frontend-build
+WORKDIR /src
+COPY frontend/package.json ./
+COPY frontend/package-lock.json* ./
+COPY frontend/ .
+ARG VITE_API_BASE=/api
+ENV VITE_API_BASE=${VITE_API_BASE}
+RUN npm install --legacy-peer-deps
+RUN npm run build
+
+
+### Final image: Python app serving API and static frontend
+FROM python:3.11-slim
+WORKDIR /app
+
+# System deps
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential curl && rm -rf /var/lib/apt/lists/*
+
+# Python deps
+COPY backend/requirements.txt ./
+RUN python -m pip install --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy backend code
+COPY backend/ /app
+
+# Copy built frontend assets into the image
+COPY --from=frontend-build /src/dist /app/frontend_dist
+
+ENV PYTHONUNBUFFERED=1
+ENV DATABASE_URL=postgresql://postgres:password@postgres:5432/minesweeper_db
+
+# Expose port 80 for combined service
+EXPOSE 80
+
+# Run the FastAPI app on port 80; the app will serve the frontend files at root and APIs under /api
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 80"]

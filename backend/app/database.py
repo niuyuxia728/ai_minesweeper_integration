@@ -6,7 +6,10 @@ from datetime import datetime
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./minesweeper.db")
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
+# For SQLite we need `check_same_thread=False` when using the default sync engine in
+# single-threaded test/dev contexts. Detect sqlite by URL scheme rather than a substring.
+is_sqlite = str(DATABASE_URL).lower().startswith("sqlite")
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if is_sqlite else {})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
