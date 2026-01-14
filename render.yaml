@@ -2,9 +2,24 @@
 # - Push this repo to GitHub and connect it to Render
 # - Render will create the database and inject the DATABASE_URL into the web service
 
-databases:
-  - name: minesweeper-db
-    plan: starter
+services:
+  - type: web
+    name: minesweeper-app
+    env: docker
+    dockerfilePath: Dockerfile.deploy
+    branch: new-blueprint
+    plan: free
+    buildCommand: null
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: ALLOW_ORIGIN
+        value: "*"
+      - key: DATABASE_URL
+        fromDatabase: 
+          name: minesweeper-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
 
 services:
   - type: web
@@ -17,5 +32,5 @@ services:
     envVars:
       - key: ALLOW_ORIGIN
         value: "*"
-    databases:
-      - minesweeper-db
+      - key: SECRET_KEY
+        generateValue: true
