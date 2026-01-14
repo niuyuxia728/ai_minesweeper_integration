@@ -2,11 +2,11 @@
 # - Push this repo to GitHub and connect it to Render
 # - Render will create the database and inject the DATABASE_URL into the web service
 
-services:
-  - type: postgres
-    name: minesweeper-db
+databases:
+  - name: minesweeper-db
     plan: starter
 
+services:
   - type: web
     name: minesweeper-app
     env: docker
